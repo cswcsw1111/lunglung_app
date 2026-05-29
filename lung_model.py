@@ -7,37 +7,33 @@ import platform
 import os
 import matplotlib.font_manager as fm
 
-# 1. 📊 전천후 한글 깨짐 방지 설정 (로컬 및 클라우드 서버 양방향 대응)
-def set_korean_font():
-    # 고유 폰트 파일 경로 (코드와 같은 위치에 NanumGothic.ttf가 있다고 가정)
+# 1. 📊 깃허브 파일명(NanumGothic-Bold.ttf)에 맞춘 폰트 로드 루틴
+def get_korean_font_prop():
+    # 깃허브에 올라와 있는 정확한 파일명으로 지정
     local_font_path = "NanumGothic-Bold.ttf"
     
+    # 1) 프로젝트 폴더 내 파일 확인 (우선순위 1위)
     if os.path.exists(local_font_path):
-        # 1) 서버/로컬 공통: 프로젝트 폴더 내 ttf 파일이 있으면 최우선 적용
-        font_prop = fm.FontProperties(fname=local_font_path)
-        plt.rc('font', family=font_prop.get_name())
+        return fm.FontProperties(fname=local_font_path)
+    
+    # 2) 파일이 없을 경우 운영체제별 시스템 폰트 경로 탐색 (백업용)
+    system_name = platform.system()
+    if system_name == "Windows":
+        return fm.FontProperties(family="Malgun Gothic")
+    elif system_name == "Darwin":
+        return fm.FontProperties(family="AppleGothic")
     else:
-        # 2) 백업용: 폰트 파일이 없을 경우 기존 시스템 내장 폰트 사용
-        system_name = platform.system()
-        if system_name == "Windows":
-            plt.rc('font', family='Malgun Gothic')
-        elif system_name == "Darwin":
-            plt.rc('font', family='AppleGothic')
-        else:
-            # 리눅스 서버 기본 폰트 경로 탐색 차선책
-            font_list = [f.name for f in fm.fontManager.ttflist]
-            if 'NanumGothic' in font_list:
-                plt.rc('font', family='NanumGothic')
-            elif 'Noto Sans CJK KR' in font_list:
-                plt.rc('font', family='Noto Sans CJK KR')
-            else:
-                plt.rcParams['font.family'] = 'sans-serif'
-                
-    # 마이너스 기호 깨짐 방지
-    plt.rcParams['axes.unicode_minus'] = False
+        # 리눅스 서버 기본 나눔폰트 경로 확인
+        linux_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+        if os.path.exists(linux_path):
+            return fm.FontProperties(fname=linux_path)
+    return None
 
-# 폰트 설정 실행
-set_korean_font()
+# 전역 마이너스 부호 깨짐 방지
+plt.rcParams['axes.unicode_minus'] = False
+
+# 폰트 프로퍼티 객체 가져오기
+font_prop = get_korean_font_prop()
 
 # 2. 🎨 Streamlit 페이지 설정
 st.set_page_config(page_title="폐 건강 상태 AI 분석기", layout="wide", page_icon="🫁")
@@ -134,10 +130,22 @@ if submit_btn:
         # 새 환자 위치 (X)
         ax.scatter(smokes, alkhol, c='black', s=300, marker='X', zorder=5)
         
-        # 그래프 스타일링
-        ax.set_xlabel('흡연량', fontsize=11, fontweight='bold', labelpad=8)
-        ax.set_ylabel('음주량', fontsize=11, fontweight='bold', labelpad=8)
-        ax.set_title('흡연량 및 음주량에 따른 군집 분포 (2D 투영)', fontsize=13, pad=15, fontweight='bold')
+        # 개별 컴포넌트에 폰트 프로퍼티 강제 주입
+        if font_prop:
+            title_prop = font_prop.copy()
+            title_prop.set_size(13)
+            
+            label_prop = font_prop.copy()
+            label_prop.set_size(11)
+            
+            ax.set_xlabel('흡연량', fontproperties=label_prop, labelpad=8)
+            ax.set_ylabel('음주량', fontproperties=label_prop, labelpad=8)
+            ax.set_title('흡연량 및 음주량에 따른 군집 분포 (2D 투영)', fontproperties=title_prop, pad=15)
+        else:
+            ax.set_xlabel('흡연량', fontsize=11, fontweight='bold', labelpad=8)
+            ax.set_ylabel('음주량', fontsize=11, fontweight='bold', labelpad=8)
+            ax.set_title('흡연량 및 음주량에 따른 군집 분포 (2D 투영)', fontsize=13, pad=15, fontweight='bold')
+            
         ax.grid(True, linestyle='--', alpha=0.2)
         
         # 범례 설정
@@ -147,7 +155,12 @@ if submit_btn:
             Line2D([0], [0], marker='o', color='w', label='위험군 (파란색)', markerfacecolor='#1976D2', markersize=10),
             Line2D([0], [0], marker='X', color='w', label='새 환자 위치', markerfacecolor='black', markersize=12, markeredgecolor='black')
         ]
-        ax.legend(handles=legend_elements, title="구분", loc="upper right", frameon=True)
+        
+        leg = ax.legend(handles=legend_elements, loc="upper right", frameon=True)
+        if font_prop:
+            leg.set_title("구분", prop=font_prop)
+            for text in leg.get_texts():
+                text.set_fontproperties(font_prop)
         
         st.pyplot(fig)
 else:

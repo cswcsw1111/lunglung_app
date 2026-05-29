@@ -7,39 +7,36 @@ import platform
 import os
 import matplotlib.font_manager as fm
 
-# 1. 📊 전천후 한글 깨짐 방지 설정 (서버 환경 대응 자동 다운로드 포함)
+# 1. 📊 전천후 한글 깨짐 방지 설정 (로컬 및 클라우드 서버 양방향 대응)
 def set_korean_font():
-    system_name = platform.system()
+    # 고유 폰트 파일 경로 (코드와 같은 위치에 NanumGothic.ttf가 있다고 가정)
+    local_font_path = "NanumGothic.ttf"
     
-    if system_name == "Windows":
-        plt.rc('font', family='Malgun Gothic')
-    elif system_name == "Darwin":
-        plt.rc('font', family='AppleGothic')
+    if os.path.exists(local_font_path):
+        # 1) 서버/로컬 공통: 프로젝트 폴더 내 ttf 파일이 있으면 최우선 적용
+        font_prop = fm.FontProperties(fname=local_font_path)
+        plt.rc('font', family=font_prop.get_name())
     else:
-        # 💡 리눅스/클라우드 서버 환경을 위한 나눔폰트 자동 설치 로직
-        font_dir = "/usr/share/fonts/truetype/nanum"
-        font_path = os.path.join(font_dir, "NanumGothic.ttf")
-        
-        # 서버에 폰트가 없으면 패키지 설치 시도 혹은 시스템에 사용 가능한 한글 폰트 탐색
-        if not os.path.exists(font_path):
-            try:
-                os.system("sudo apt-get install -y fonts-nanum")
-                fm._rebuild()
-            except:
-                pass
-        
-        # 시스템에 설치된 폰트 중 한글 폰트 매핑 찾기
-        font_list = [f.name for f in fm.fontManager.ttflist]
-        if 'NanumGothic' in font_list:
-            plt.rc('font', family='NanumGothic')
-        elif 'Noto Sans CJK KR' in font_list:
-            plt.rc('font', family='Noto Sans CJK KR')
+        # 2) 백업용: 폰트 파일이 없을 경우 기존 시스템 내장 폰트 사용
+        system_name = platform.system()
+        if system_name == "Windows":
+            plt.rc('font', family='Malgun Gothic')
+        elif system_name == "Darwin":
+            plt.rc('font', family='AppleGothic')
         else:
-            # 폰트 강제 매핑 규칙 추가
-            plt.rcParams['font.family'] = 'sans-serif'
-            
+            # 리눅스 서버 기본 폰트 경로 탐색 차선책
+            font_list = [f.name for f in fm.fontManager.ttflist]
+            if 'NanumGothic' in font_list:
+                plt.rc('font', family='NanumGothic')
+            elif 'Noto Sans CJK KR' in font_list:
+                plt.rc('font', family='Noto Sans CJK KR')
+            else:
+                plt.rcParams['font.family'] = 'sans-serif'
+                
+    # 마이너스 기호 깨짐 방지
     plt.rcParams['axes.unicode_minus'] = False
 
+# 폰트 설정 실행
 set_korean_font()
 
 # 2. 🎨 Streamlit 페이지 설정
@@ -112,7 +109,7 @@ if submit_btn:
         <div style="background-color: #F8F9FA; padding: 20px; border: 1px solid #E9ECEF; border-radius: 8px; line-height: 1.6;">
             📌 <b>그래프 위치와 결과가 다른 이유:</b><br>
             현재 환자분의 [흡연량: {smokes} / 음주량: {alkhol}] 수치는 우측 그래프상에서 <b>{visual_cluster}</b> 영역에 찍혀 있습니다. <br><br>
-            하지만 AI 모델은 그래프에 표시되지 않은 <b>[거주지 대기질: {areaq}]</b> 수치까지 포함하여 3차원 분석을 수행합니다. 
+            배경의 AI 모델은 그래프에 표시되지 않은 <b>[거주지 대기질: {areaq}]</b> 수치까지 포함하여 3차원 분석을 수행합니다. <br>
             그 결과, 흡연량 대비 상대적으로 높은 대기질 위험도 요인이 반영되어 최종 판정은 
             <span style="color: {result['color']}; font-weight: bold;">[{result['name']}]</span> 영역으로 안전하게 분류되었습니다.
         </div>

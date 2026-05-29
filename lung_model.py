@@ -10,7 +10,7 @@ import matplotlib.font_manager as fm
 # 1. 📊 전천후 한글 깨짐 방지 설정 (로컬 및 클라우드 서버 양방향 대응)
 def set_korean_font():
     # 고유 폰트 파일 경로 (코드와 같은 위치에 NanumGothic.ttf가 있다고 가정)
-    local_font_path = "NanumGothic.ttf"
+    local_font_path = "NanumGothic-Bold.ttf"
     
     if os.path.exists(local_font_path):
         # 1) 서버/로컬 공통: 프로젝트 폴더 내 ttf 파일이 있으면 최우선 적용
